@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-bg-canvas: #F8FAFC; /* Soft application background (Slate 50) */
+  --color-surface-interactive: #FFFFFF; /* Strict white for pills and cards */
+  --color-primary-lava: #ff5416; /* From the original design system */
+  --color-text-roast: #1a1513; /* Deep roast for high contrast text */
+  --color-text-muted: #64748b; /* Slate 500 for secondary text */
+  
+  --font-sans: "Sora", "DM Sans", system-ui, sans-serif;
+  
+  /* Hard shadows for the bubbly brutalism feel */
+  --shadow-hard: 4px 4px 0px 0px var(--color-text-roast);
+  --shadow-hard-active: 2px 2px 0px 0px var(--color-text-roast);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg-canvas);
+    color: var(--color-text-roast);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Ensure the global body background switches for mobile overscroll */
+  .dark body {
+    background-color: #0B1325;
+    color: #F8FAFC;
+  }
+
+  /* Accessible focus ring for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-lava);
+    outline-offset: 2px;
+  }
+}
+
+/* Hide scrollbars on the vibe carousel while preserving scroll functionality */
+.vibe-carousel {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.vibe-carousel::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.caret-blink {
+  animation: caret-blink 0.8s infinite;
+}
