@@ -52,11 +52,11 @@ export function useOrchestrator() {
       const { coordinates, manualLocation, selectedCraving, budget, distance } = useSessionStore.getState();
       console.log('[Orchestrator] Selections loaded:', { coordinates, manualLocation, selectedCraving, budget, distance });
       
-      // Stage 2: Context Aggregation
-      setCurrentStep('Checking skies...');
+      // Combine UI loading states
+      setCurrentStep('Scouting local spots & skies...');
       const timeInfo = new Date().toLocaleString();
-      let weatherInfo = 'Unknown';
-      
+
+      // Prepare payload for Weather
       const weatherPayload: Record<string, any> = {};
       if (coordinates) {
         weatherPayload.lat = coordinates.lat;
@@ -64,33 +64,8 @@ export function useOrchestrator() {
       } else if (manualLocation) {
         weatherPayload.query = manualLocation;
       }
-      
-      if (weatherPayload.lat || weatherPayload.query) {
-        console.log('[Orchestrator] Fetching weather with payload:', weatherPayload);
-        try {
-          const res = await fetch('/api/weather', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(weatherPayload),
-            signal,
-          });
-          const data = await res.json();
-          if (data.weather) {
-            weatherInfo = data.weather;
-            console.log('[Orchestrator] Weather fetched:', weatherInfo);
-          }
-        } catch (err: any) {
-          if (err.name === 'AbortError') return; // Silently exit on intentional abort
-          console.warn('[Orchestrator] Weather fetch failed, proceeding without it:', err);
-        }
-      }
-      
-      useSessionStore.getState().setWeatherInfo(weatherInfo);
 
-      // Stage 3: Fetching localized restaurant candidate lists
-      if (signal.aborted) return;
-      setCurrentStep('Reading menus...');
-      let candidates: any[] = [];
+      // Prepare payload for Places
       const placesPayload: Record<string, any> = {
         distance: distance || 'Near',
         craving: selectedCraving === 'Surprise me' ? undefined : selectedCraving
@@ -105,29 +80,60 @@ export function useOrchestrator() {
         throw new Error('No location provided.');
       }
 
+      // Resilient Parallel Fetching: Weather (Non-critical)
+      let weatherPromise = Promise.resolve('Unknown');
+      if (weatherPayload.lat || weatherPayload.query) {
+        console.log('[Orchestrator] Fetching weather with payload:', weatherPayload);
+        weatherPromise = fetch('/api/weather', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(weatherPayload),
+          signal,
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.weather) {
+              console.log('[Orchestrator] Weather fetched:', data.weather);
+              return data.weather;
+            }
+            return 'Unknown';
+          })
+          .catch(err => {
+            if (err.name === 'AbortError') throw err;
+            console.warn('[Orchestrator] Weather fetch failed, proceeding without it:', err);
+            return 'Unknown';
+          });
+      }
+
+      // Resilient Parallel Fetching: Places (Critical Path)
       console.log('[Orchestrator] Querying places API with payload:', placesPayload);
-      const placesRes = await fetch('/api/places', {
+      const placesPromise = fetch('/api/places', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(placesPayload),
         signal,
+      }).then(async (placesRes) => {
+        console.log('[Orchestrator] Places API status:', placesRes.status);
+        if (!placesRes.ok) {
+          const errBody = await placesRes.json().catch(() => ({}));
+          throw new Error(errBody.error || `Places API responded with ${placesRes.status}`);
+        }
+        const placesData = await placesRes.json();
+        if (placesData.places && placesData.places.length > 0) {
+          console.log('[Orchestrator] Candidates found:', placesData.places.length);
+          return placesData.places;
+        } else {
+          throw new Error('Failed to find restaurants nearby.');
+        }
       });
 
-      console.log('[Orchestrator] Places API status:', placesRes.status);
-      if (!placesRes.ok) {
-        const errBody = await placesRes.json().catch(() => ({}));
-        throw new Error(errBody.error || `Places API responded with ${placesRes.status}`);
-      }
+      // Execute both simultaneously
+      const [weatherInfo, candidates] = await Promise.all([weatherPromise, placesPromise]);
 
-      const placesData = await placesRes.json();
+      if (signal.aborted) return;
       
-      if (placesData.places && placesData.places.length > 0) {
-        candidates = placesData.places;
-        console.log('[Orchestrator] Candidates found:', candidates.length);
-      } else {
-        throw new Error('Failed to find restaurants nearby.');
-      }
-      
+      // Update global state with the results safely
+      useSessionStore.getState().setWeatherInfo(weatherInfo);
       useSessionStore.getState().setCandidates(candidates);
 
       // Stage 4: Gemini Intelligence

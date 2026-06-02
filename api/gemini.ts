@@ -46,12 +46,12 @@ Candidates List:
 ${JSON.stringify(candidates, null, 2)}
 `;
 
-  const models = ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
+  const models = ['gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
   const maxRetries = 4;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      // Fallback: 2.5-flash -> 3.5-flash -> 2.5-flash-lite
+      // Fallback Cascade: 2.0-flash -> 2.5-pro -> 2.0-flash-lite
       const model = models[attempt - 1];
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
