@@ -121,7 +121,17 @@ flowchart TD
 
 ---
 
-## 3. Tech Stack & Rationale
+## 3. Core Features
+
+| Feature                               | Description                                                                                                              | Technical Approach                                                                                                                                                                        |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hyper-Personalized Context Engine** | Generates food recommendations based on real-world user context such as location, time, weather, and nearby restaurants. | Aggregates geolocation, local time, and weather data, then combines them with Google Places API results. Includes graceful fallback when optional context (e.g., weather) is unavailable. |
+| **Rule-of-Three AI Curation**         | Reduces decision fatigue by limiting output to exactly three high-quality restaurant recommendations.                    | Uses Google Gemini with structured prompting and strict JSON validation to ensure consistent, deterministic outputs.                                                                      |
+| **Food Roulette Experience**          | Provides an interactive and engaging UI for selecting food preferences and receiving instant recommendations.            | Built with React and Framer Motion for smooth animations. Zustand is used for lightweight state management and performance optimization during API workflows.                             |
+
+---
+
+## 4. Tech Stack & Rationale
 | Layer | Technology | Rationale |
 | :--- | :--- | :--- |
 | **Frontend** | React 18 + Vite | Enables fast development with HMR, efficient builds, and a scalable component-based architecture for rapid UI iteration. |
@@ -132,7 +142,8 @@ flowchart TD
 
 ---
 
-## 4. Installation & Setup Instructions
+## 5. Installation & Setup Instructions
+
 ### Prerequisites
 - Node.js 18+
 - npm or yarn
@@ -183,7 +194,7 @@ npm run dev
 The application will be available at:
 [http://localhost:5173](http://localhost:5173)
 
-## 5. Known Limitations & Future Roadmap
+## 6. Known Limitations & Future Roadmap
 
 ### Current Limitations
 
