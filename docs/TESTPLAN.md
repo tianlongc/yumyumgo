@@ -1,0 +1,13 @@
+# Test Plan
+
+## Target Module: `src/hooks/useOrchestrator.ts`
+
+| Test Case ID | Description | Pre-conditions | Steps | Expected Result | Actual | Status | Comments |
+|--------------|-------------|----------------|-------|-----------------|--------|--------|----------|
+| `ORCH-001` | Happy Path: Successfully orchestrates all 4 stages with GPS coordinates. | `useSessionStore` has valid `coordinates`. APIs return `200 OK`. | 1. Call `startPipeline()`.<br/>2. Wait for completion. | Hook state progresses through all loading strings. `store.setCandidates` and `store.setAiResults` are called with mocked data. `navigate('/results')` is called. | As expected | Passed | Ensures the primary data flow works. |
+| `ORCH-002` | Happy Path: Successfully orchestrates with manual location fallback. | `useSessionStore` has valid `manualLocation`, but NO `coordinates`. | 1. Call `startPipeline()`. | Pipeline completes successfully. Places API receives `{ query }` payload instead of lat/lng. | As expected | Passed | Equivalence partition testing for location input. |
+| `ORCH-003` | Negative: Weather API fails (Graceful Degradation). | Store has `coordinates`. Mock `fetch` for `/api/weather` to reject/fail. | 1. Call `startPipeline()`. | Pipeline catches weather error, warns in console, but continues. Gemini receives `weatherInfo: 'Unknown'`. Pipeline completes. | As expected | Passed | Validates fault-tolerance of non-critical APIs. |
+| `ORCH-004` | Negative: Places API fails or returns empty. | Mock `fetch` for `/api/places` to return empty array or `500`. | 1. Call `startPipeline()`. | Pipeline aborts. `error` state is set to "Failed to find restaurants nearby.". `navigate` is NOT called. | As expected | Passed | Validates critical failure handling. |
+| `ORCH-005` | Negative: All LLMs fail (Places Fallback). | Mock `fetch` for `/api/gemini` to return `500` or `429` for all models. | 1. Call `startPipeline()`. | Pipeline successfully completes using fallback raw Places data. `store.setAiResults` is populated with raw Places data instead of Gemini output. | As expected | Passed | Validates failover cascade and graceful degradation. |
+| `ORCH-006` | Boundary: No location provided. | Store has `coordinates: null` and `manualLocation: null`. | 1. Call `startPipeline()`. | Immediately aborts and sets `error` to "No location provided." without making any network calls. | As expected | Passed | Validates data contract boundaries. |
+| `ORCH-007` | Negative: API Timeout (`AbortController`). | Mock `fetch` to delay response beyond 9000ms. | 1. Call `startPipeline()`. | Pipeline aborts gracefully via AbortController. `error` state is set to "Request timed out." | As expected | Passed | Validates Vercel hobby tier timeout prevention. |
